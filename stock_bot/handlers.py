@@ -1,5 +1,6 @@
 from stock_bot.models import User, Transaction
 from stock_bot.db import SessionLocal
+import logging
 
 
 def handle_new_user(chat_id, username):
@@ -14,11 +15,11 @@ def handle_new_user(chat_id, username):
         new_user = User(chat_id=chat_id, username=username)
         session.add(new_user)
         session.commit()
-        print(f"Added new user: {username} ({chat_id})")
+        logging.info(f"Added new user: {username} ({chat_id})")
         session.close()
         return True  # New user added
     else:
-        print(f"User {username} ({chat_id}) already exists")
+        logging.info(f"User {username} ({chat_id}) already exists")
         session.close()
         return False  # User already exists
 

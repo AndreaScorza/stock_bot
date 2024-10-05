@@ -3,76 +3,77 @@ from telegram.ext import Application, CommandHandler
 from stock_bot.config import Config
 from stock_bot.handlers import handle_new_user
 from stock_bot.db import init_db
-from stock_bot.transaction_handler import TransatcionHandler  # Import your scraper class
+from stock_bot.transaction_handler import TransactionHandler  # Import your scraper class
 from stock_bot.notification_handler import NotificationHandler
 import schedule
 import time
+import asyncio
 import logging
+
 
 class TelegramBot:
     def __init__(self):
-        # Initialize the bot with the token using the new Application builder
         self.application = Application.builder().token(Config.BOT_TOKEN).build()
-
-        
-        # Pass the initialized bot to the NotificationHandler
-        self.notifier = NotificationHandler(self.application.bot)  # Pass the bot object
-
-
-        # Initialize the transaction scraper (which handles scraping and notifications)
-        self.tx_handler = TransatcionHandler()
+        self.notifier = NotificationHandler(self.application.bot)
+        self.tx_handler = TransactionHandler()
 
     async def start(self, update: Update):
         chat_id = update.effective_chat.id
         username = update.effective_chat.username or "Unknown"
         
-        # Handle new users joining and check if the user is new
         is_new_user = handle_new_user(chat_id, username)
         
         if is_new_user:
-            # Send a welcome message only if the user is new
             self.notifier.send_welcome_message(chat_id)
         else:
-            # Optionally, do something else if the user is already present
-            print(f"User {username} is already registered.")
+            logging.info(f"User {username} is already registered.")
 
+    async def schedule_tasks_async(self):
+        logging.info("Starting the scheduling task")
 
-    def schedule_tasks(self):
-        # This is the scheduled job that will run every 30 minutes
         def job():
-            # Fetch and store transactions, get the new ones
+            logging.info("Executing scheduled job: Fetching and storing transactions...")
             new_transactions = self.tx_handler.fetch_and_store()
 
-            # If there are new transactions, notify users
             if new_transactions:
+                logging.info(f"Found {len(new_transactions)} new transactions. Notifying users...")
                 self.notifier.notify_users(new_transactions)
+            else:
+                logging.info("No new transactions found.")
 
         # Schedule the job to run every 30 minutes
         schedule.every(30).minutes.do(job)
 
-        # Keep the script running and checking the schedule
         while True:
             schedule.run_pending()
-            time.sleep(1)
+            await asyncio.sleep(1)  # Non-blocking sleep
 
-    def run(self):
-        # Add a command handler for the /start command
+    async def run(self):
         start_handler = CommandHandler('start', self.start)
         self.application.add_handler(start_handler)
 
-        # Start polling for updates (Telegram messages)
-        self.application.run_polling()
+        logging.info("Initializing the Application...")
+        # Explicitly initialize the application
+        await self.application.initialize()
 
-        # Start the scheduled scraping task
-        self.schedule_tasks()
+        logging.info("Starting Telegram polling and scheduling tasks")
+
+        # Run both polling and scheduling in parallel using asyncio
+        await asyncio.gather(
+            self.application.start(),
+            self.schedule_tasks_async()
+        )
 
 def main():
-    # Initialize the database
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
     init_db()
-
-    # Run the bot
     bot = TelegramBot()
-    bot.run()
+    
+    # asyncio.run(bot.run())
+
+        # Get the existing event loop and run the bot
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(bot.run())  # Use the event loop to run the bot
 
 if __name__ == "__main__":
     main()

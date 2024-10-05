@@ -1,10 +1,11 @@
 from stock_bot.scraper import fetch_transactions
 from stock_bot.handlers import store_new_transactions
+import logging
 
-class TransatcionHandler:
+class TransactionHandler:
 
     def fetch_and_store(self):
-        print("Running transaction fetching job...")
+        logging.info("Running transaction fetching job...")
 
         # Fetch the latest transactions from the website
         transactions = fetch_transactions()
