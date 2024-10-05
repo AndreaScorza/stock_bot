@@ -22,7 +22,7 @@ class TelegramBot:
         # Initialize the transaction scraper (which handles scraping and notifications)
         self.tx_handler = TransatcionHandler()
 
-    async def start(self, update: Update, context):
+    async def start(self, update: Update):
         chat_id = update.effective_chat.id
         username = update.effective_chat.username or "Unknown"
         
@@ -38,8 +38,17 @@ class TelegramBot:
 
 
     def schedule_tasks(self):
+        # This is the scheduled job that will run every 30 minutes
+        def job():
+            # Fetch and store transactions, get the new ones
+            new_transactions = self.tx_handler.fetch_and_store()
+
+            # If there are new transactions, notify users
+            if new_transactions:
+                self.notifier.notify_users(new_transactions)
+
         # Schedule the job to run every 30 minutes
-        schedule.every(30).minutes.do(self.tx_handler.fetch_and_store)
+        schedule.every(30).minutes.do(job)
 
         # Keep the script running and checking the schedule
         while True:
