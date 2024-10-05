@@ -1,5 +1,5 @@
 from stock_bot.scraper import fetch_transactions
-from stock_bot.handlers import store_new_transactions
+from stock_bot.db_handler import store_new_transactions
 import logging
 
 class TransactionHandler:

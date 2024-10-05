@@ -4,7 +4,7 @@ import time
 from telegram import Update
 from telegram.ext import Application, CommandHandler
 from stock_bot.config import Config
-from stock_bot.handlers import handle_new_user
+from stock_bot.db_handler import handle_new_user
 from stock_bot.db import init_db
 from stock_bot.transaction_handler import TransactionHandler
 from stock_bot.notification_handler import NotificationHandler
@@ -20,12 +20,17 @@ class TelegramBot:
         chat_id = update.effective_chat.id
         username = update.effective_chat.username or "Unknown"
         
+        logging.info(f"Received /start command from user {username} (chat_id={chat_id})")
+
         is_new_user = handle_new_user(chat_id, username)
         
         if is_new_user:
-            self.notifier.send_welcome_message(chat_id)
+            logging.info(f"New user {username} added to the database.")
+            await self.notifier.send_welcome_message(chat_id)
         else:
             logging.info(f"User {username} is already registered.")
+            await self.notifier.send_already_registered_message(chat_id)
+
 
     async def async_job(self):
         logging.info("Executing scheduled job: Fetching and storing transactions...")
@@ -33,7 +38,7 @@ class TelegramBot:
 
         if new_transactions:
             logging.info(f"Found {len(new_transactions)} new transactions. Notifying users...")
-            self.notifier.notify_users(new_transactions)
+            await self.notifier.notify_users(new_transactions)
         else:
             logging.info("No new transactions found.")
 
@@ -45,7 +50,7 @@ class TelegramBot:
             # Run the job every 30 minutes (1800 seconds)
             logging.info("Scheduling next job...")
             await self.async_job()  # Run the asynchronous job
-            await asyncio.sleep(1800)  # Non-blocking sleep for 30 minutes
+            await asyncio.sleep(60)  # Non-blocking sleep for 30 minutes
 
     async def run(self):
         start_handler = CommandHandler('start', self.start)

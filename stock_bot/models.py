@@ -21,6 +21,7 @@ class Transaction(Base):
     price = Column(Float)
     total = Column(Float)
 
+    # Used for debugging prints
     def __repr__(self):
         return f"<Transaction(date={self.transaction_date}, security={self.security}, activity={self.activity})>"
 

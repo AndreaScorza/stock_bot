@@ -1,4 +1,6 @@
-from stock_bot.handlers import get_all_users  # Import the function from handlers
+from stock_bot.db_handler import get_all_users  # Import the function from handlers
+import logging
+import asyncio
 
 class NotificationHandler:
     def __init__(self, bot):
@@ -6,11 +8,16 @@ class NotificationHandler:
         self.bot = bot
 
     
-    def send_welcome_message(self, chat_id):
+    async def send_welcome_message(self, chat_id):
         # Centralized method to send the welcome message
-        self.bot.send_message(chat_id=chat_id, text="Welcome to the bot!")
+        await self.bot.send_message(chat_id=chat_id, text="Welcome to the bot!")
 
-    def notify_users(self, transactions):
+        
+    async def send_already_registered_message(self, chat_id):
+        # Centralized method to send the welcome message
+        await self.bot.send_message(chat_id=chat_id, text="You are already registered chill!!")
+
+    async def notify_users(self, transactions):
         # Get all users from the database
         users = get_all_users()
 
@@ -27,5 +34,11 @@ class NotificationHandler:
                     f"Price: {tx.price}\n"
                     f"Total: {tx.total}"
                 )
-                # Send message to each user
-                self.bot.send_message(chat_id=user.chat_id, text=message)
+                try:
+                    await self.bot.send_message(chat_id=user.chat_id, text=message)
+                except Exception as e:
+                    # Log any exception that occurs
+                    logging.error(f"Failed to send message to {user.chat_id}: {e}")
+
+                # Add a delay between each message to avoid hitting rate limits
+                await asyncio.sleep(1)
