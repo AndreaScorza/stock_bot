@@ -23,7 +23,7 @@ def fetch_transactions(url: str = 'https://www.dataroma.com/m/rt.php'):
         
         transactions.append({
             'transaction_date': transaction_date,
-            'filing': filing,
+            'filing_date': filing,
             'reporting_name': reporting_name,
             'activity': activity,
             'security': security,

@@ -1,14 +1,13 @@
-from telegram import Update, Bot
+import asyncio
+import logging
+import time
+from telegram import Update
 from telegram.ext import Application, CommandHandler
 from stock_bot.config import Config
 from stock_bot.handlers import handle_new_user
 from stock_bot.db import init_db
-from stock_bot.transaction_handler import TransactionHandler  # Import your scraper class
+from stock_bot.transaction_handler import TransactionHandler
 from stock_bot.notification_handler import NotificationHandler
-import schedule
-import time
-import asyncio
-import logging
 
 
 class TelegramBot:
@@ -28,25 +27,25 @@ class TelegramBot:
         else:
             logging.info(f"User {username} is already registered.")
 
+    async def async_job(self):
+        logging.info("Executing scheduled job: Fetching and storing transactions...")
+        new_transactions = self.tx_handler.fetch_and_store()
+
+        if new_transactions:
+            logging.info(f"Found {len(new_transactions)} new transactions. Notifying users...")
+            self.notifier.notify_users(new_transactions)
+        else:
+            logging.info("No new transactions found.")
+
     async def schedule_tasks_async(self):
         logging.info("Starting the scheduling task")
-
-        def job():
-            logging.info("Executing scheduled job: Fetching and storing transactions...")
-            new_transactions = self.tx_handler.fetch_and_store()
-
-            if new_transactions:
-                logging.info(f"Found {len(new_transactions)} new transactions. Notifying users...")
-                self.notifier.notify_users(new_transactions)
-            else:
-                logging.info("No new transactions found.")
-
-        # Schedule the job to run every 30 minutes
-        schedule.every(30).minutes.do(job)
-
+        
+        # Custom asyncio-based scheduling loop
         while True:
-            schedule.run_pending()
-            await asyncio.sleep(1)  # Non-blocking sleep
+            # Run the job every 30 minutes (1800 seconds)
+            logging.info("Scheduling next job...")
+            await self.async_job()  # Run the asynchronous job
+            await asyncio.sleep(1800)  # Non-blocking sleep for 30 minutes
 
     async def run(self):
         start_handler = CommandHandler('start', self.start)
@@ -64,16 +63,17 @@ class TelegramBot:
             self.schedule_tasks_async()
         )
 
+
 def main():
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
     init_db()
-    bot = TelegramBot()
-    
-    # asyncio.run(bot.run())
 
-        # Get the existing event loop and run the bot
+    bot = TelegramBot()
+
+    # Get the existing event loop and run the bot
     loop = asyncio.get_event_loop()
     loop.run_until_complete(bot.run())  # Use the event loop to run the bot
+
 
 if __name__ == "__main__":
     main()
