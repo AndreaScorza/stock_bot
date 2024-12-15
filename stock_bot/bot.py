@@ -16,7 +16,7 @@ class TransactionBot:
         self.notifier = NotificationHandler(self.application.bot)
 
     async def async_job(self):
-        logging.info("Executing scheduled job: Fetching and storing transactions...")
+        logging.info("Executing job: Fetching and storing transactions...")
         new_transactions = self.tx_handler.fetch_and_store()
 
         if new_transactions:
@@ -25,21 +25,13 @@ class TransactionBot:
         else:
             logging.info("No new transactions found.")
 
-    async def schedule_tasks_async(self):
-        logging.info("Starting the scheduling task")
-        
-        while True:
-            logging.info("Scheduling next job...")
-            await self.async_job()  # Run the asynchronous job and await it
-            await asyncio.sleep(1800)  # Non-blocking sleep for 30 minutes
-
     async def run(self):
         logging.info("Initializing the Application...")
         # Explicitly initialize the application
         await self.application.initialize()
 
-        logging.info("Starting scheduled tasks...")
-        await self.schedule_tasks_async()
+        # Run the job once
+        await self.async_job()
 
 def main():
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -47,7 +39,7 @@ def main():
 
     bot = TransactionBot()
 
-    # Get the existing event loop and run the scheduled tasks
+    # Run the event loop for the bot
     loop = asyncio.get_event_loop()
     loop.run_until_complete(bot.run())
 
