@@ -95,3 +95,18 @@ def remove_last_transaction():
     
     finally:
         session.close()
+
+def delete_user(chat_id):
+    session = SessionLocal()
+    try:
+        user = session.query(User).filter(User.chat_id == chat_id).first()
+        if user:
+            session.delete(user)
+            session.commit()
+            logging.info(f"Deleted user with chat_id: {chat_id}")
+            return True
+        else:
+            logging.info(f"No user found with chat_id: {chat_id}")
+            return False
+    finally:
+        session.close()
